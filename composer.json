@@ -1,0 +1,21 @@
+{
+    "name": "leconfe/paypal-payment",
+    "autoload": {
+        "psr-4": {
+            "PaypalPayment\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Leconfe"
+        }
+    ],
+    "require": {
+        "omnipay/paypal": "^3.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": false
+        }
+    }
+}

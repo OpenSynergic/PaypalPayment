@@ -1,0 +1,5 @@
+name: 'Paypal Payment'
+folder: PaypalPayment
+author: Leconfe
+description: 'Payment integration for Paypal'
+version: 1.0.0
