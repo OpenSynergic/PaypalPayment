@@ -5,7 +5,7 @@ namespace PaypalPayment;
 use App\Classes\Plugin;
 use App\Facades\Hook;
 use App\Infolists\Components\VerticalTabs as InfolistsVerticalTabs;
-use Awcodes\Shout\Components\ShoutEntry;
+use Awcodes\Shout\Components\Shout;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Panel;
@@ -35,7 +35,7 @@ class PaypalPaymentPlugin extends Plugin
                     ->visible(fn ($record) => $record->payment_method == 'paypal')
                     ->description('')
                     ->schema([
-                        ShoutEntry::make('information')
+                        Shout::make('information')
                             ->content('Detailed financial information is securely stored on PayPal')
                             ->type('info'),
                         TextEntry::make('payment_id')
