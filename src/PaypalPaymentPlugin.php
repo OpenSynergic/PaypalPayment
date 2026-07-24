@@ -25,7 +25,7 @@ class PaypalPaymentPlugin extends Plugin
             Hook::add('PaymentManager::getPaymentMethodActions', function ($hookName, &$actions) {
                 $actions['paypal'] = Action::make('paypal')
                     ->label('Paypal Payment')
-                    ->url(fn ($record) => route(PaypalPage::getRouteName('scheduledConference'), ['id' => $record->getKey()]));
+                    ->url(fn ($record) => route(PaypalPage::getRouteName(\Filament\Facades\Filament::getPanel('scheduledConference')), ['id' => $record->getKey()]));
 
                 return false;
             });

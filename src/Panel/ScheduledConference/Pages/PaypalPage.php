@@ -62,8 +62,8 @@ class PaypalPage extends Page
             'amount' => number_format($paymentQueue->amount, 2, '.', ''),
             'currency' => $paymentQueue->currency,
             'description' => $paymentQueue->getMeta('title'),
-            'returnUrl' => route(static::getRouteName(), ['id' => $paymentQueue->id]),
-            'cancelUrl' => route(static::getRouteName(), ['id' => $paymentQueue->id]),
+            'returnUrl' => route(static::getRouteName(\Filament\Facades\Filament::getPanel('scheduledConference')), ['id' => $paymentQueue->id]),
+            'cancelUrl' => route(static::getRouteName(\Filament\Facades\Filament::getPanel('scheduledConference')), ['id' => $paymentQueue->id]),
         ]);
 
         $response = $transaction->send();
