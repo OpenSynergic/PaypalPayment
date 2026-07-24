@@ -14,7 +14,7 @@ use Omnipay\Omnipay;
 
 class PaypalPage extends Page
 {
-    protected static string $view = 'PaypalPayment::panel.scheduledConference.pages.paypal';
+    protected string $view = 'PaypalPayment::panel.scheduledConference.pages.paypal';
 
     protected static bool $shouldRegisterNavigation = false;
 
