@@ -1,6 +1,6 @@
 {
     "name": "leconfe/paypal-payment",
-    "description": "PayPal payment gateway integration for Leconfe (Laravel 13 & Filament 5 compatible).",
+    "description": "PayPal payment gateway integration for Leconfe.",
     "autoload": {
         "psr-4": {
             "PaypalPayment\\": "src/"
