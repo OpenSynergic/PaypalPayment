@@ -11,8 +11,12 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Panel;
 use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
-use PaypalPayment\Panel\ScheduledConference\Livewire\PaypalSetting;
-use PaypalPayment\Panel\ScheduledConference\Pages\PaypalPage;
+if (! class_exists('Filament\Schemas\Components\Section') && class_exists('Filament\Infolists\Components\Section')) {
+    class_alias('Filament\Infolists\Components\Section', 'Filament\Schemas\Components\Section');
+}
+if (! class_exists('Filament\Schemas\Components\Livewire') && class_exists('Filament\Infolists\Components\Livewire')) {
+    class_alias('Filament\Infolists\Components\Livewire', 'Filament\Schemas\Components\Livewire');
+}
 
 class PaypalPaymentPlugin extends Plugin
 {
