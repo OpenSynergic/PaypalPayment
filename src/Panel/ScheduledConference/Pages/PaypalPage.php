@@ -159,9 +159,9 @@ class PaypalPage extends Page
     protected function isSupportedPayPalCurrency(string $currency): bool
     {
         $supportedCurrencies = [
-            'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'SGD', 'HKD', 'MYR',
-            'NZD', 'THB', 'PHP', 'TWD', 'CHF', 'CZK', 'DKK', 'HUF', 'ILS',
-            'MXN', 'NOK', 'PLN', 'SEK',
+            'USD', 'EUR', 'GBP', 'AUD', 'BRL', 'CAD', 'CNY', 'CZK', 'DKK',
+            'HKD', 'HUF', 'ILS', 'JPY', 'MYR', 'MXN', 'TWD', 'NZD', 'NOK',
+            'PHP', 'PLN', 'RUB', 'SGD', 'SEK', 'CHF', 'THB',
         ];
 
         return in_array(strtoupper($currency), $supportedCurrencies, true);
