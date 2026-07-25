@@ -58,10 +58,12 @@ class PaypalPage extends Page
             'testMode' => $paypalPlugin->isTestMode(),
         ]);
 
+        [$currency, $amount] = $this->getPayPalCurrencyAndAmount($paymentQueue);
+
         $transaction = $gateway->purchase([
-            'amount' => number_format($paymentQueue->amount, 2, '.', ''),
-            'currency' => $paymentQueue->currency,
-            'description' => $paymentQueue->getMeta('title'),
+            'amount' => number_format($amount, 2, '.', ''),
+            'currency' => $currency,
+            'description' => $paymentQueue->getMeta('title') ?? ('Payment #'.$paymentQueue->id),
             'returnUrl' => route(static::getRouteName(\Filament\Facades\Filament::getPanel('scheduledConference')), ['id' => $paymentQueue->id]),
             'cancelUrl' => route(static::getRouteName(\Filament\Facades\Filament::getPanel('scheduledConference')), ['id' => $paymentQueue->id]),
         ]);
@@ -74,7 +76,7 @@ class PaypalPage extends Page
         if (! $response->isSuccessful()) {
             Log::error('PayPal purchase initialization failed: '.$response->getMessage());
 
-            return abort(403, 'Payment initialization failed. Please try again or contact support.');
+            return abort(403, 'Payment initialization failed ('.$response->getMessage().'). Please try again or contact support.');
         }
 
         abort(403, 'PayPal response was not redirect!');
@@ -117,11 +119,13 @@ class PaypalPage extends Page
             }
             $transaction = $data['transactions'][0];
 
+            [$expectedCurrency, $expectedAmount] = $this->getPayPalCurrencyAndAmount($paymentQueue);
+
             if (
-                (float) $transaction['amount']['total'] != (float) $paymentQueue->amount
-                || $transaction['amount']['currency'] != Str::upper($paymentQueue->currency)
+                (float) $transaction['amount']['total'] != (float) $expectedAmount
+                || $transaction['amount']['currency'] != $expectedCurrency
             ) {
-                $message = 'Amounts ('.$transaction['amount']['total'].' '.$transaction['amount']['currency'].' vs '.$paymentQueue->amount.' '.$paymentQueue->currency.') don\'t match!';
+                $message = 'Amounts ('.$transaction['amount']['total'].' '.$transaction['amount']['currency'].' vs '.$expectedAmount.' '.$expectedCurrency.') don\'t match!';
                 Log::error('PayPal amount mismatch: '.$message);
 
                 abort(403, 'Payment amount mismatch detected.');
@@ -145,4 +149,32 @@ class PaypalPage extends Page
             abort(403, 'An error occurred while completing payment verification.');
         }
     }
+
+    protected function getPayPalCurrencyAndAmount(Payment $paymentQueue): array
+    {
+        $supportedCurrencies = [
+            'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'SGD', 'HKD', 'MYR',
+            'NZD', 'THB', 'PHP', 'TWD', 'CHF', 'CZK', 'DKK', 'HUF', 'ILS',
+            'MXN', 'NOK', 'PLN', 'SEK',
+        ];
+
+        $currency = strtoupper($paymentQueue->currency ?? 'USD');
+        $amount = (float) $paymentQueue->amount;
+
+        if (! in_array($currency, $supportedCurrencies)) {
+            if ($currency === 'IDR') {
+                // Convert IDR to USD for PayPal sandbox/live testing (1 USD = 15,500 IDR)
+                $amount = round($amount / 15500, 2);
+                if ($amount < 1.00) {
+                    $amount = 1.00;
+                }
+                $currency = 'USD';
+            } else {
+                $currency = 'USD';
+            }
+        }
+
+        return [$currency, $amount];
+    }
 }
+
