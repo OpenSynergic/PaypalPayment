@@ -14,7 +14,10 @@ use Omnipay\Omnipay;
 
 class PaypalPage extends Page
 {
-    protected string $view = 'PaypalPayment::panel.scheduledConference.pages.paypal';
+    public function getView(): string
+    {
+        return 'PaypalPayment::panel.scheduledConference.pages.paypal';
+    }
 
     protected static bool $shouldRegisterNavigation = false;
 
@@ -66,12 +69,14 @@ class PaypalPage extends Page
             "PayPal does not support transactions in {$currency}. Please use a supported currency (such as USD or EUR) or select an alternative payment method."
         );
 
+        $returnRoute = static::getPanelRouteName('scheduledConference');
+
         $transaction = $gateway->purchase([
             'amount' => number_format($paymentQueue->amount, 2, '.', ''),
             'currency' => $currency,
             'description' => $paymentQueue->getMeta('title') ?? ('Payment #'.$paymentQueue->id),
-            'returnUrl' => route(static::getRouteName(\Filament\Facades\Filament::getPanel('scheduledConference')), ['id' => $paymentQueue->id]),
-            'cancelUrl' => route(static::getRouteName(\Filament\Facades\Filament::getPanel('scheduledConference')), ['id' => $paymentQueue->id]),
+            'returnUrl' => route($returnRoute, ['id' => $paymentQueue->id]),
+            'cancelUrl' => route($returnRoute, ['id' => $paymentQueue->id]),
         ]);
 
         $response = $transaction->send();
@@ -165,6 +170,16 @@ class PaypalPage extends Page
         ];
 
         return in_array(strtoupper($currency), $supportedCurrencies, true);
+    }
+
+    protected static function getPanelRouteName(string $panelName = 'scheduledConference'): string
+    {
+        $paramType = (new \ReflectionMethod(static::class, 'getRouteName'))->getParameters()[0]->getType()?->getName();
+        $panelArg = ($paramType === 'string')
+            ? $panelName
+            : \Filament\Facades\Filament::getPanel($panelName);
+
+        return static::getRouteName($panelArg);
     }
 }
 
