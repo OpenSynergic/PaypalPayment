@@ -58,10 +58,16 @@ class PaypalPage extends Page
             'testMode' => $paypalPlugin->isTestMode(),
         ]);
 
-        [$currency, $amount] = $this->getPayPalCurrencyAndAmount($paymentQueue);
+        $currency = strtoupper($paymentQueue->currency ?? 'USD');
+
+        abort_if(
+            ! $this->isSupportedPayPalCurrency($currency),
+            400,
+            "PayPal does not support transactions in {$currency}. Please use a supported currency (such as USD or EUR) or select an alternative payment method."
+        );
 
         $transaction = $gateway->purchase([
-            'amount' => number_format($amount, 2, '.', ''),
+            'amount' => number_format($paymentQueue->amount, 2, '.', ''),
             'currency' => $currency,
             'description' => $paymentQueue->getMeta('title') ?? ('Payment #'.$paymentQueue->id),
             'returnUrl' => route(static::getRouteName(\Filament\Facades\Filament::getPanel('scheduledConference')), ['id' => $paymentQueue->id]),
@@ -119,13 +125,13 @@ class PaypalPage extends Page
             }
             $transaction = $data['transactions'][0];
 
-            [$expectedCurrency, $expectedAmount] = $this->getPayPalCurrencyAndAmount($paymentQueue);
+            $currency = strtoupper($paymentQueue->currency ?? 'USD');
 
             if (
-                (float) $transaction['amount']['total'] != (float) $expectedAmount
-                || $transaction['amount']['currency'] != $expectedCurrency
+                (float) $transaction['amount']['total'] != (float) $paymentQueue->amount
+                || $transaction['amount']['currency'] != $currency
             ) {
-                $message = 'Amounts ('.$transaction['amount']['total'].' '.$transaction['amount']['currency'].' vs '.$expectedAmount.' '.$expectedCurrency.') don\'t match!';
+                $message = 'Amounts ('.$transaction['amount']['total'].' '.$transaction['amount']['currency'].' vs '.$paymentQueue->amount.' '.$currency.') don\'t match!';
                 Log::error('PayPal amount mismatch: '.$message);
 
                 abort(403, 'Payment amount mismatch detected.');
@@ -150,7 +156,7 @@ class PaypalPage extends Page
         }
     }
 
-    protected function getPayPalCurrencyAndAmount(Payment $paymentQueue): array
+    protected function isSupportedPayPalCurrency(string $currency): bool
     {
         $supportedCurrencies = [
             'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'SGD', 'HKD', 'MYR',
@@ -158,23 +164,7 @@ class PaypalPage extends Page
             'MXN', 'NOK', 'PLN', 'SEK',
         ];
 
-        $currency = strtoupper($paymentQueue->currency ?? 'USD');
-        $amount = (float) $paymentQueue->amount;
-
-        if (! in_array($currency, $supportedCurrencies)) {
-            if ($currency === 'IDR') {
-                // Convert IDR to USD for PayPal sandbox/live testing (1 USD = 15,500 IDR)
-                $amount = round($amount / 15500, 2);
-                if ($amount < 1.00) {
-                    $amount = 1.00;
-                }
-                $currency = 'USD';
-            } else {
-                $currency = 'USD';
-            }
-        }
-
-        return [$currency, $amount];
+        return in_array(strtoupper($currency), $supportedCurrencies, true);
     }
 }
 
