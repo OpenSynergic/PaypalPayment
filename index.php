@@ -1,8 +1,7 @@
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
-
 use PaypalPayment\PaypalPaymentPlugin;
 
-return new PaypalPaymentPlugin;
+require __DIR__ . '/vendor/autoload.php';
 
+return new PaypalPaymentPlugin;

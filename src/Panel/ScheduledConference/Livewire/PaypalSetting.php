@@ -3,39 +3,20 @@
 namespace PaypalPayment\Panel\ScheduledConference\Livewire;
 
 use App\Facades\Plugin;
+use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
-use Filament\Forms\Components\Actions;
-use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Checkbox;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Livewire\Component;
-
-if (! class_exists('Filament\Forms\Components\Actions') && class_exists('Filament\Schemas\Components\Actions')) {
-    class_alias('Filament\Schemas\Components\Actions', 'Filament\Forms\Components\Actions');
-}
-if (! class_exists('Filament\Forms\Components\Grid') && class_exists('Filament\Schemas\Components\Grid')) {
-    class_alias('Filament\Schemas\Components\Grid', 'Filament\Forms\Components\Grid');
-}
-if (! class_exists('Filament\Forms\Components\Section') && class_exists('Filament\Schemas\Components\Section')) {
-    class_alias('Filament\Schemas\Components\Section', 'Filament\Forms\Components\Section');
-}
-if (! class_exists('Filament\Forms\Components\Actions\Action') && class_exists('Filament\Actions\Action')) {
-    class_alias('Filament\Actions\Action', 'Filament\Forms\Components\Actions\Action');
-}
-if (! class_exists('Filament\Schemas\Schema') && class_exists('Filament\Forms\Form')) {
-    class_alias('Filament\Forms\Form', 'Filament\Schemas\Schema');
-}
-if (! class_exists('Filament\Schemas\Components\Utilities\Get') && class_exists('Filament\Forms\Get')) {
-    class_alias('Filament\Forms\Get', 'Filament\Schemas\Components\Utilities\Get');
-}
 
 class PaypalSetting extends Component implements HasForms, HasActions
 {

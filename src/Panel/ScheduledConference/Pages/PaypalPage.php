@@ -174,12 +174,7 @@ class PaypalPage extends Page
 
     protected static function getPanelRouteName(string $panelName = 'scheduledConference'): string
     {
-        $paramType = (new \ReflectionMethod(static::class, 'getRouteName'))->getParameters()[0]->getType()?->getName();
-        $panelArg = ($paramType === 'string')
-            ? $panelName
-            : \Filament\Facades\Filament::getPanel($panelName);
-
-        return static::getRouteName($panelArg);
+        return static::getRouteName(\Filament\Facades\Filament::getPanel($panelName));
     }
 }
 

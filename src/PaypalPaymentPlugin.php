@@ -13,15 +13,6 @@ use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
 use PaypalPayment\Panel\ScheduledConference\Livewire\PaypalSetting;
 use PaypalPayment\Panel\ScheduledConference\Pages\PaypalPage;
-if (! class_exists('PaypalPayment\PaypalPage') && class_exists('PaypalPayment\Panel\ScheduledConference\Pages\PaypalPage')) {
-    class_alias('PaypalPayment\Panel\ScheduledConference\Pages\PaypalPage', 'PaypalPayment\PaypalPage');
-}
-if (! class_exists('Filament\Schemas\Components\Section') && class_exists('Filament\Infolists\Components\Section')) {
-    class_alias('Filament\Infolists\Components\Section', 'Filament\Schemas\Components\Section');
-}
-if (! class_exists('Filament\Schemas\Components\Livewire') && class_exists('Filament\Infolists\Components\Livewire')) {
-    class_alias('Filament\Infolists\Components\Livewire', 'Filament\Schemas\Components\Livewire');
-}
 
 class PaypalPaymentPlugin extends Plugin
 {
@@ -35,26 +26,16 @@ class PaypalPaymentPlugin extends Plugin
                 $actions['paypal'] = Action::make('paypal')
                     ->label('Paypal Payment')
                     ->url(function ($record) {
-                        $paramType = (new \ReflectionMethod(PaypalPage::class, 'getRouteName'))->getParameters()[0]->getType()?->getName();
-                        $panelArg = ($paramType === 'string')
-                            ? 'scheduledConference'
-                            : \Filament\Facades\Filament::getPanel('scheduledConference');
-
-                        return route(PaypalPage::getRouteName($panelArg), ['id' => $record->getKey()]);
+                        return route(PaypalPage::getRouteName(\Filament\Facades\Filament::getPanel('scheduledConference')), ['id' => $record->getKey()]);
                     });
 
                 return false;
             });
 
             Hook::add('PaymentManager::getPaymentMethodInfolist', function ($hookName, &$schemas) {
-                $infoComponent = (! class_exists('Filament\Schemas\Components\Component'))
-                    ? TextEntry::make('information')
-                        ->label('Notice')
-                        ->default('Detailed financial information is securely stored on PayPal')
-                        ->columnSpanFull()
-                    : Shout::make('information')
-                        ->content('Detailed financial information is securely stored on PayPal')
-                        ->type('info');
+                $infoComponent = Shout::make('information')
+                    ->content('Detailed financial information is securely stored on PayPal')
+                    ->type('info');
 
                 $schemas[] = Section::make('Paypal Payment')
                     ->visible(fn ($record) => $record->payment_method == 'paypal')
