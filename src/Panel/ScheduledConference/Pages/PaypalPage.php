@@ -8,12 +8,16 @@ use App\Models\Payment;
 use App\Panel\ScheduledConference\Pages\PaymentDetail;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Omnipay\Omnipay;
 
 class PaypalPage extends Page
 {
-    protected static string $view = 'PaypalPayment::panel.scheduledConference.pages.paypal';
+    public function getView(): string
+    {
+        return 'PaypalPayment::panel.scheduledConference.pages.paypal';
+    }
 
     protected static bool $shouldRegisterNavigation = false;
 
@@ -29,6 +33,14 @@ class PaypalPage extends Page
             ->first();
 
         abort_if(! $paymentQueue, 404);
+
+        // SECURITY HARDEING: Verify that the current user owns this payment queue or has editor permission
+        abort_if(
+            $paymentQueue->user_id !== auth()->id() && ! (auth()->check() && auth()->user()->can('update', app()->getCurrentScheduledConference())),
+            403,
+            'Unauthorized access to payment queue'
+        );
+
         abort_if($paymentQueue->isExpired(), 403, 'Payment Queue expired');
 
         if ($request->input('paymentId') && $request->input('PayerID') && $request->input('token')) {
@@ -49,12 +61,22 @@ class PaypalPage extends Page
             'testMode' => $paypalPlugin->isTestMode(),
         ]);
 
+        $currency = strtoupper($paymentQueue->currency ?? 'USD');
+
+        abort_if(
+            ! $this->isSupportedPayPalCurrency($currency),
+            400,
+            "PayPal does not support transactions in {$currency}. Please use a supported currency (such as USD or EUR) or select an alternative payment method."
+        );
+
+        $returnRoute = static::getPanelRouteName('scheduledConference');
+
         $transaction = $gateway->purchase([
             'amount' => number_format($paymentQueue->amount, 2, '.', ''),
-            'currency' => $paymentQueue->currency,
-            'description' => $paymentQueue->getMeta('title'),
-            'returnUrl' => route(static::getRouteName(), ['id' => $paymentQueue->id]),
-            'cancelUrl' => route(static::getRouteName(), ['id' => $paymentQueue->id]),
+            'currency' => $currency,
+            'description' => $paymentQueue->getMeta('title') ?? ('Payment #'.$paymentQueue->id),
+            'returnUrl' => route($returnRoute, ['id' => $paymentQueue->id]),
+            'cancelUrl' => route($returnRoute, ['id' => $paymentQueue->id]),
         ]);
 
         $response = $transaction->send();
@@ -63,7 +85,9 @@ class PaypalPage extends Page
             return redirect($response->getRedirectUrl());
         }
         if (! $response->isSuccessful()) {
-            return abort(403, $response->getMessage());
+            Log::error('PayPal purchase initialization failed: '.$response->getMessage());
+
+            return abort(403, 'Payment initialization failed ('.$response->getMessage().'). Please try again or contact support.');
         }
 
         abort(403, 'PayPal response was not redirect!');
@@ -89,32 +113,37 @@ class PaypalPage extends Page
 
             $response = $transaction->send();
             if (! $response->isSuccessful()) {
-                abort(403, $response->getMessage());
+                Log::error('PayPal completePurchase failed: '.$response->getMessage());
+                abort(403, 'Payment verification failed with PayPal.');
             }
 
             $data = $response->getData();
 
-            if ($data['state'] != 'approved') {
-                abort(403, 'State '.$data['state'].' is not approved!');
+            if (($data['state'] ?? null) !== 'approved') {
+                Log::warning('PayPal payment state not approved', ['state' => $data['state'] ?? null]);
+                abort(403, 'Payment was not approved by PayPal.');
             }
 
-            if (count($data['transactions']) != 1) {
-                abort(403, 'Unexpected transaction count!');
+            if (count($data['transactions'] ?? []) !== 1) {
+                Log::error('PayPal unexpected transaction count in callback');
+                abort(403, 'Unexpected transaction format received from PayPal.');
             }
             $transaction = $data['transactions'][0];
 
+            $currency = strtoupper($paymentQueue->currency ?? 'USD');
+
             if (
                 (float) $transaction['amount']['total'] != (float) $paymentQueue->amount
-                || $transaction['amount']['currency'] != Str::upper($paymentQueue->currency)
+                || $transaction['amount']['currency'] != $currency
             ) {
-                $message = 'Amounts ('.$transaction['amount']['total'].' '.$transaction['amount']['currency'].' vs '.$paymentQueue->amount.' '.$paymentQueue->currency.') don\'t match!';
+                $message = 'Amounts ('.$transaction['amount']['total'].' '.$transaction['amount']['currency'].' vs '.$paymentQueue->amount.' '.$currency.') don\'t match!';
+                Log::error('PayPal amount mismatch: '.$message);
 
-                abort(403, $message);
+                abort(403, 'Payment amount mismatch detected.');
             }
 
             $paymentManager = PaymentManager::get();
             $paymentManager->fulfillQueued($paymentQueue, 'paypal', auth()?->id());
-
 
             $paymentQueue->setMeta('paypal_payment_id', $request->input('paymentId'));
             $paymentQueue->setMeta('paypal_token', $request->input('token'));
@@ -127,7 +156,25 @@ class PaypalPage extends Page
 
             return redirect()->to(PaymentDetail::getUrl(['record' => $paymentQueue]));
         } catch (\Exception $e) {
-            abort(403, $e->getMessage());
+            Log::error('PayPal completion error: '.$e->getMessage());
+            abort(403, 'An error occurred while completing payment verification.');
         }
     }
+
+    protected function isSupportedPayPalCurrency(string $currency): bool
+    {
+        $supportedCurrencies = [
+            'USD', 'EUR', 'GBP', 'AUD', 'BRL', 'CAD', 'CNY', 'CZK', 'DKK',
+            'HKD', 'HUF', 'ILS', 'JPY', 'MYR', 'MXN', 'TWD', 'NZD', 'NOK',
+            'PHP', 'PLN', 'RUB', 'SGD', 'SEK', 'CHF', 'THB',
+        ];
+
+        return in_array(strtoupper($currency), $supportedCurrencies, true);
+    }
+
+    protected static function getPanelRouteName(string $panelName = 'scheduledConference'): string
+    {
+        return static::getRouteName(\Filament\Facades\Filament::getPanel($panelName));
+    }
 }
+

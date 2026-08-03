@@ -3,21 +3,24 @@
 namespace PaypalPayment\Panel\ScheduledConference\Livewire;
 
 use App\Facades\Plugin;
-use Filament\Forms\Components\Actions;
-use Filament\Forms\Components\Actions\Action;
+use Filament\Actions\Action;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\Checkbox;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
 use Livewire\Component;
 
-class PaypalSetting extends Component implements HasForms
+class PaypalSetting extends Component implements HasForms, HasActions
 {
+    use InteractsWithActions;
     use InteractsWithForms;
 
     public ?array $formData = [];
@@ -36,38 +39,39 @@ class PaypalSetting extends Component implements HasForms
         ]);
     }
 
-    public function form(Form $form): Form
+    public function form(mixed $schema): mixed
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make()
                     ->schema([
                         Toggle::make('payment_enabled')
                             ->label(__('general.enabled')),
                         Checkbox::make('test_mode')
                             ->label('Sandbox')
-                            ->reactive()
-                            ->extraAttributes([
-                                'x-on:change' => 'console.log($wire.formData.test_mode)',
-                            ])
+                            ->live()
                             ->helperText('Enable sandbox mode for testing'),
                         Grid::make(1)
                             ->maxWidth('xl')
-                            ->hidden(fn (Get $get) => $get('test_mode'))
+                            ->hidden(fn (Get $get) => (bool) $get('test_mode'))
                             ->schema([
                                 TextInput::make('client_id')
                                     ->label('Live Client ID'),
                                 TextInput::make('client_secret')
-                                    ->label('Live Client Secret'),
+                                    ->label('Live Client Secret')
+                                    ->password()
+                                    ->revealable(),
                             ]),
                         Grid::make(1)
                             ->maxWidth('xl')
-                            ->visible(fn (Get $get) => $get('test_mode'))
+                            ->visible(fn (Get $get) => (bool) $get('test_mode'))
                             ->schema([
                                 TextInput::make('client_id_test')
                                     ->label('Sandbox Client ID'),
                                 TextInput::make('client_secret_test')
-                                    ->label('Sandbox Client Secret'),
+                                    ->label('Sandbox Client Secret')
+                                    ->password()
+                                    ->revealable(),
                             ]),
                     ]),
                 Actions::make([
@@ -79,7 +83,6 @@ class PaypalSetting extends Component implements HasForms
                             $formData = $this->form->getState();
 
                             try {
-
                                 $paypalPlugin = Plugin::getPlugin('PaypalPayment');
                                 $paypalPlugin->updateSetting('payment_enabled', $formData['payment_enabled']);
                                 $paypalPlugin->updateSetting('test_mode', $formData['test_mode']);
@@ -91,14 +94,13 @@ class PaypalSetting extends Component implements HasForms
                                     $paypalPlugin->updateSetting('client_secret_test', $formData['client_secret_test']);
                                 }
                             } catch (\Throwable $th) {
-
                                 $action->failure();
                                 throw $th;
                             }
 
                             $action->success();
                         })
-                        ->authorize('RegistrationSetting:update'),
+                        ->authorize(fn () => auth()->user()?->can('update', app()->getCurrentScheduledConference())),
                 ]),
             ])
             ->statePath('formData');
